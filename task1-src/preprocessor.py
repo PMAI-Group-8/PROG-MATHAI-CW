@@ -35,3 +35,51 @@ class Preprocessor:
         X_normalized = self.normalize(X_test)
         X_shuffled, y_shuffled = self.shuffle(X_normalized, y_test)
         return X_shuffled, y_shuffled
+    
+class PreprocessorAdvanced():
+    def __init__(self):
+        self.mean = None
+        self.std = None
+
+    def normalize(self, X):
+        return X.astype(np.float32) / 255.0
+
+    def standardize_fit(self, X):
+        """Fit per-pixel mean/std on training data."""
+        self.mean = X.mean(axis=0)
+        self.std = X.std(axis=0) + 1e-8
+        return (X - self.mean) / self.std
+
+    def standardize_transform(self, X):
+        """Apply stored mean/std to val/test data."""
+        if self.mean is None or self.std is None:
+            raise RuntimeError("Must fit standardisation on training data first.")
+        return (X - self.mean) / self.std
+
+    def shuffle(self, X, y):
+        assert len(X) == len(y)
+        p = np.random.permutation(len(X))
+        return X[p], y[p]
+
+    def split(self, X, y, train_ratio=0.8):
+        split_idx = int(len(X) * train_ratio)
+        return X[:split_idx], y[:split_idx], X[split_idx:], y[split_idx:]
+
+    def preprocess_train_data(self, X, y, train_ratio=0.8):
+        X = self.normalize(X)
+        X = X.reshape(X.shape[0], -1)
+
+        X, y = self.shuffle(X, y)
+        X_train, y_train, X_val, y_val = self.split(X, y, train_ratio)
+
+        X_train = self.standardize_fit(X_train)
+        X_val   = self.standardize_transform(X_val)
+
+        return X_train, y_train, X_val, y_val
+
+    def preprocess_test_data(self, X_test, y_test):
+        X = self.normalize(X_test)
+        X = X.reshape(X.shape[0], -1)
+        X = self.standardize_transform(X)
+
+        return X, y_test
