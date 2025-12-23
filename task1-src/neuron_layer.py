@@ -12,6 +12,7 @@ class NeuronLayer:
         self.activation = activation
         self.dropout = dropout
         self.l2 = l2
+        self.l2 = l2
     
     ''' Forward pass through the layer '''
     def forward(self, X, training=True):
