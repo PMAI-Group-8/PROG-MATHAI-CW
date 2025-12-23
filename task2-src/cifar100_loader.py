@@ -176,12 +176,12 @@ def get_datasets(
 
 
 def get_dataloaders(
-    data_root: str = "dataset/cifar100",
+    data_root: str = "./dataset/cifar100",
     batch_size: int = 128,
     num_workers: int = 4,
     val_split: int = 5000,
     seed: int = 42,
-    pin_memory: bool = True,
+    pin_memory: bool = False,
     persistent_workers: bool | None = None,
 ) -> Tuple[DataLoader, DataLoader, DataLoader, list[str]]:
     """
@@ -282,9 +282,12 @@ def save_sample_grid(
 
 
 if __name__ == "__main__":
+    script_dir = Path(__file__).resolve().parent
+    dataset_path = script_dir.parent / "dataset" / "cifar100"
+    
     print("Loading CIFAR-100 datasets...")
     train_loader, val_loader, test_loader, class_names = get_dataloaders(
-        data_root="dataset/cifar100",
+        data_root=str(dataset_path),
         batch_size=128,
         num_workers=4,
         val_split=5000,
