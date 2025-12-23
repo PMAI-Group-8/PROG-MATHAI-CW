@@ -176,7 +176,7 @@ def get_datasets(
 
 
 def get_dataloaders(
-    data_root: str = "dataset/cifar100",
+    data_root: str = "../dataset/cifar100",
     batch_size: int = 128,
     num_workers: int = 4,
     val_split: int = 5000,
@@ -284,7 +284,7 @@ def save_sample_grid(
 if __name__ == "__main__":
     print("Loading CIFAR-100 datasets...")
     train_loader, val_loader, test_loader, class_names = get_dataloaders(
-        data_root="dataset/cifar100",
+        data_root="../dataset/cifar100",
         batch_size=128,
         num_workers=4,
         val_split=5000,
