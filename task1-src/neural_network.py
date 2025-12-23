@@ -25,6 +25,7 @@ class NeuralNetwork:
                 cfg['n_neurons'],
                 cfg.get('activation'),
                 cfg.get('dropout'),
+                cfg.get('l2')
                 )
             )
 
@@ -43,9 +44,12 @@ class NeuralNetwork:
     
     ''' Compute loss and its gradient '''
     def compute_loss_and_gradient(self, Y_pred, Y_true):
-        loss = self.loss_function.forward(Y_pred, Y_true)
+        data_loss = self.loss_function.forward(Y_pred, Y_true)
         dLoss = self.loss_function.backward()
-        return loss, dLoss
+
+        total_loss = data_loss + self.l2_loss()
+        return total_loss, dLoss
+    
     
     ''' One-hot encode labels '''
     def one_hot_encode(self, y, num_classes):
@@ -54,14 +58,23 @@ class NeuralNetwork:
         return one_hot
     
     ''' Train the neural network '''
-    def train(self, X, Y_true, X_val, y_val, epochs = 100):
+    def train(self, X, Y_true, X_val, y_val, epochs = 100, batch_size=32):
         y_onehot = self.one_hot_encode(Y_true, num_classes=10)
+        n = X.shape[0]
+
         for epoch in range(epochs):
-            Y_pred = self.forward(X, training=True)
+            idx = np.random.permutation(n)
+            X_shuffled = X[idx]
+            y_onehot_shuffled = y_onehot[idx]
+            for i in range(0, n, batch_size):
+                X_batch = X_shuffled[i:i+batch_size]
+                y_onehot_batch = y_onehot_shuffled[i:i+batch_size]
 
-            loss, dLoss = self.compute_loss_and_gradient(Y_pred, y_onehot)
+                Y_pred = self.forward(X_batch, training=True)
 
-            self.backward(dLoss)
+                loss, dLoss = self.compute_loss_and_gradient(Y_pred, y_onehot_batch)
+
+                self.backward(dLoss)
 
             if epoch % 10 == 0:
                 val_accuracy = self.accuracy(X_val, y_val)
@@ -78,6 +91,14 @@ class NeuralNetwork:
     def accuracy(self, X, y_true):
         y_pred = self.predict(X)
         return np.mean(y_pred == y_true)
+    
+    def l2_loss(self):
+        loss = 0.0
+        for layer in self.layers:
+            if layer.l2 is not None:
+                loss += layer.l2.penalty(layer.W)
+        return loss
+
 
 
 

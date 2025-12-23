@@ -33,6 +33,9 @@ class NeuronLayer:
         db = np.sum(dZ, axis=0, keepdims=True)
         dX = np.dot(dZ, self.W.T)
 
+        if self.l2 is not None:
+            dW += self.l2.gradient(self.W)
+
         ''' Update weights and biases with stochastic gradient descent '''
         self.W -= learning_rate * dW
         self.b -= learning_rate * db
