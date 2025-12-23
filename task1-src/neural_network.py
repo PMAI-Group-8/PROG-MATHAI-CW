@@ -5,28 +5,41 @@ np.random.seed(42)
 from layers.loss import SoftmaxCrossEntropy
 from neuron_layer import NeuronLayer
 from layers.activation_functions import ReLU, Sigmoid
+from layers.dropout import Dropout
+
+'''
+EEEDWARD1 implemented:
+- preprocessing pipeline in preprocessor.py
+- 
+'''
 
 class NeuralNetwork:
-    def __init__(self):
-        self.layer1 = NeuronLayer(n_inputs=3072, n_outputs=128, activation=ReLU())
-        self.layer2 = NeuronLayer(n_inputs=128, n_outputs=64, activation=ReLU())
-        self.layer3 = NeuronLayer(n_inputs=64, n_outputs=10, activation=None)
+    def __init__(self, layer_config, learning_rate=0.01):
+        self.layers = []
+        self.learning_rate = learning_rate
         self.loss_function = SoftmaxCrossEntropy()
+
+        for cfg in layer_config:
+            self.layers.append(NeuronLayer(
+                cfg['n_inputs'],
+                cfg['n_neurons'],
+                cfg.get('activation'),
+                cfg.get('dropout'),
+                )
+            )
 
     ''' Forward pass through the network '''
     ''' Result is not one-hot encoded; softmax is applied in the loss function '''
-    def forward(self, X):
-        A1 = self.layer1.forward(X)
-        A2 = self.layer2.forward(A1)
-        A3 = self.layer3.forward(A2)
-        return A3
+    def forward(self, X, training = True):
+        for layer in self.layers:
+            X = layer.forward(X, training)
+        return X
     
     ''' Backward pass through the network '''
     def backward(self, dLoss):
-        dA3 = self.layer3.backward(dLoss, learning_rate=0.01)
-        dA2 = self.layer2.backward(dA3, learning_rate=0.01)
-        dA1 = self.layer1.backward(dA2, learning_rate=0.01)
-        return dA1
+        for layer in reversed(self.layers):
+            dLoss = layer.backward(dLoss, self.learning_rate)
+        return dLoss
     
     ''' Compute loss and its gradient '''
     def compute_loss_and_gradient(self, Y_pred, Y_true):
@@ -41,16 +54,29 @@ class NeuralNetwork:
         return one_hot
     
     ''' Train the neural network '''
-    def train(self, X, Y_true, epochs = 100):
+    def train(self, X, Y_true, X_val, y_val, epochs = 100):
         y_onehot = self.one_hot_encode(Y_true, num_classes=10)
         for epoch in range(epochs):
-            Y_pred = self.forward(X)
+            Y_pred = self.forward(X, training=True)
 
             loss, dLoss = self.compute_loss_and_gradient(Y_pred, y_onehot)
 
             self.backward(dLoss)
 
             if epoch % 10 == 0:
-                print(f"Epoch {epoch}, Loss: {loss:.4f}")
+                accuracy = self.accuracy(X_val, y_val)
+                print(f"Epoch {epoch}, Loss: {loss:.4f}, Validation Accuracy: {accuracy:.2f}")
+
+    '''Predict class labels for given input'''
+    def predict(self, X):
+        Y_pred = self.forward(X, training=False)
+        predictions = np.argmax(Y_pred, axis=1)
+        return predictions
+    
+    ''' Calculate overall accuracy '''
+    def accuracy(self, X, y_true):
+        y_pred = self.predict(X)
+        return np.mean(y_pred == y_true)
+
 
 

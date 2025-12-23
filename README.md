@@ -2,8 +2,11 @@
 Group 8, coursework for Programming and Mathematics for AI class
 
 ## Members
-tbc
-
+- Joey
+- Sal
+- Vishnu
+- Eduard
+- Wajid
 
 ## Download CIFAR datasets
 1. Go to the CIFAR Dataset Page:
@@ -21,3 +24,7 @@ tbc
     - ```dataset/```
         - ```cifar10/``` (batch files and metadata)
         - ```cifar100/``` (```train```, ```test```, ```meta```, etc.)
+
+
+## How to use 
+1. tbc
