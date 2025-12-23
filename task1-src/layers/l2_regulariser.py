@@ -12,4 +12,3 @@ class L2Regularizer:
     
     def gradient(self, W):
         return self.lam * W
-    
