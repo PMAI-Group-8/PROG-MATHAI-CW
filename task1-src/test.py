@@ -37,7 +37,8 @@ layer_config = [
         'n_inputs': 3072, 
         'n_neurons': 1024, 
         'activation': ReLU(), 
-        'dropout': Dropout(0.7)
+        'dropout': Dropout(0.7),
+        'l2' : 0.001
     },
     {
         'n_inputs': 1024,  
@@ -102,7 +103,7 @@ layer_config = [
 ]
 
 nn = NeuralNetwork(layer_config, learning_rate=0.1)
-nn.train(X_train, y_train, X_val, y_val, epochs=30, batch_size=128)
+nn.train(X_train, y_train, X_val, y_val, epochs=100, batch_size=128)
 
 accuracy = nn.accuracy(X_test, y_test)
 print(f"Test accuracy: {accuracy * 100:.2f}%")
