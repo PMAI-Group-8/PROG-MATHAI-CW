@@ -64,9 +64,10 @@ class NeuralNetwork:
             self.backward(dLoss)
 
             if epoch % 10 == 0:
-                accuracy = self.accuracy(X_val, y_val)
-                print(f"Epoch {epoch}, Loss: {loss:.4f}, Validation Accuracy: {accuracy:.2f}")
-
+                val_accuracy = self.accuracy(X_val, y_val)
+                train_accuracy = self.accuracy(X, Y_true)
+                print(f"Epoch {epoch}, Loss: {loss:.4f}, Training Accuracy: {train_accuracy:.2f}, Validation Accuracy: {val_accuracy:.2f}")
+                
     '''Predict class labels for given input'''
     def predict(self, X):
         Y_pred = self.forward(X, training=False)
