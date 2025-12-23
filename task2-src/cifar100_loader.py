@@ -181,7 +181,7 @@ def get_dataloaders(
     num_workers: int = 4,
     val_split: int = 5000,
     seed: int = 42,
-    pin_memory: bool = True,
+    pin_memory: bool = False,
     persistent_workers: bool | None = None,
 ) -> Tuple[DataLoader, DataLoader, DataLoader, list[str]]:
     """

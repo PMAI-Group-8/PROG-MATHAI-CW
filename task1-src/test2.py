@@ -5,6 +5,7 @@ from neuron_layer import NeuronLayer
 from preprocessor import Preprocessor, PreprocessorAdvanced
 from layers.activation_functions import ReLU, Sigmoid
 from layers.dropout import Dropout
+from layers.optimisers import SGD, SGDWithMomentum, Adam
 
 import numpy as np
 np.random.seed(42)
@@ -52,9 +53,9 @@ layer_config = [
 
 
 # %%
-nn = NeuralNetwork(layer_config, learning_rate=0.05)
+optimiser = SGD(learning_rate=0.05, decay=0)
+nn = NeuralNetwork(layer_config, optimiser=optimiser)
 nn.train(X_train, y_train, X_val, y_val, epochs=50, batch_size = 128)
 
 accuracy = nn.accuracy(X_test, y_test)
 print(f"Test accuracy: {accuracy * 100:.2f}%")
-
