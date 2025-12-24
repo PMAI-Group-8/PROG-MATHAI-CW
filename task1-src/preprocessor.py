@@ -53,7 +53,7 @@ class PreprocessorAdvanced():
     def standardize_transform(self, X):
         """Apply stored mean/std to val/test data."""
         if self.mean is None or self.std is None:
-            raise RuntimeError("Must fit standardisation on training data first.")
+            raise RuntimeError("Must fit standardisation on training data first")
         return (X - self.mean) / self.std
 
     def shuffle(self, X, y):
