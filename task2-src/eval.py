@@ -9,19 +9,18 @@ from torch.utils.data import DataLoader
 from sklearn.metrics import confusion_matrix
 import matplotlib.pyplot as plt
 import numpy as np
+from torchvision import models
 
 from cifar100_loader import get_dataloaders
 
 
-# --- Model (same as in train.py) ---
+# --- Simple CNN (only used when arch='cnn') ---
 class CNN(nn.Module):
     def __init__(self, num_classes: int = 100):
         super(CNN, self).__init__()
         self.conv1 = nn.Conv2d(in_channels=3, out_channels=10, kernel_size=3)
         self.conv2 = nn.Conv2d(10, 20, kernel_size=3)
         self.conv2_drop = nn.Dropout2d()
-        # 32x32 -> conv3 -> 30x30 -> maxpool -> 15x15
-        # -> conv3 -> 13x13 -> maxpool -> 6x6
         self.fc1 = nn.Linear(20 * 6 * 6, 1024)
         self.fc2 = nn.Linear(1024, num_classes)
 
@@ -33,6 +32,26 @@ class CNN(nn.Module):
         x = torch.dropout(x, p=0.5, train=self.training)
         x = self.fc2(x)
         return x
+
+
+def build_model(arch: str, num_classes: int) -> nn.Module:
+    a = arch.lower()
+    if a == "cnn":
+        return CNN(num_classes=num_classes)
+    elif a == "resnet18":
+        m = models.resnet18(weights=None)
+        m.fc = nn.Linear(m.fc.in_features, num_classes)
+        return m
+    elif a == "resnet50":
+        m = models.resnet50(weights=None)
+        m.fc = nn.Linear(m.fc.in_features, num_classes)
+        return m
+    elif a == "densenet121":
+        m = models.densenet121(weights=None)
+        m.classifier = nn.Linear(m.classifier.in_features, num_classes)
+        return m
+    else:
+        raise ValueError(f"Unknown arch: {arch}")
 
 
 def accuracy_topk(outputs: torch.Tensor, targets: torch.Tensor, topk: Tuple[int, ...] = (1,)) -> list[float]:
@@ -113,12 +132,23 @@ def main():
     parser.add_argument("--num-workers", type=int, default=4)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--save-dir", type=str, default=str((script_dir / "results" / "eval").resolve()))
+    parser.add_argument("--image-size", type=int, default=128)
     args = parser.parse_args()
+
+    # Load checkpoint metadata
+    ckpt_path = Path(args.ckpt)
+    if not ckpt_path.exists():
+        raise FileNotFoundError(f"Checkpoint not found: {ckpt_path}")
+
+    state = torch.load(ckpt_path, map_location="cpu")
+    arch = state.get("arch", "cnn")
+    transform_mode = state.get("transform_mode", "cifar")
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print("Using device:", device)
+    print(f"Using transform mode: {transform_mode} | arch: {arch}")
 
-    # Resolve dataset path robustly
+    # Resolve dataset path
     data_root_path = Path(args.data_root)
     if not data_root_path.exists():
         alt = (script_dir.parent / "dataset" / "cifar100").resolve()
@@ -126,7 +156,7 @@ def main():
         data_root_path = alt
     print(f"Using data root: {data_root_path}")
 
-    # Data
+    # Data with matching transforms
     _, _, test_loader, class_names = get_dataloaders(
         data_root=str(data_root_path),
         batch_size=args.batch_size,
@@ -134,22 +164,13 @@ def main():
         val_split=5000,
         seed=args.seed,
         pin_memory=(device.type == "cuda"),
+        transform_mode=transform_mode,
+        image_size=args.image_size,
     )
 
     # Model and checkpoint
-    model = CNN(num_classes=len(class_names)).to(device)
-
-    ckpt_path = Path(args.ckpt)
-    if not ckpt_path.exists():
-        alt_ckpt = (script_dir / "results" / "best_model.pt").resolve()
-        if alt_ckpt.exists() and alt_ckpt != ckpt_path:
-            print(f"Checkpoint not found at {ckpt_path}. Using {alt_ckpt}")
-            ckpt_path = alt_ckpt
-        else:
-            raise FileNotFoundError(f"Checkpoint not found: {ckpt_path}")
-
+    model = build_model(arch, num_classes=len(class_names)).to(device)
     print(f"Loading checkpoint: {ckpt_path}")
-    state = torch.load(ckpt_path, map_location=device)
     model.load_state_dict(state["model_state"])
 
     # Evaluate on test set
