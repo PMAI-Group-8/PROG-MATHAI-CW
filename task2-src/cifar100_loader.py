@@ -113,15 +113,32 @@ class CIFAR100Dataset(Dataset):
         return img, target
 
 
-def get_transforms(transform_mode: str = "cifar", image_size: int = 256) -> Tuple[Callable, Callable]:
+def get_transforms(transform_mode: str = "cifar", image_size: int = 128) -> Tuple[Callable, Callable]:
     """
     Build train and val/test transforms.
     Modes:
       - 'cifar': 32x32, CIFAR-100 normalization
       - 'imagenet': resize to `image_size`, ImageNet normalization (for pretrained backbones)
     """
-    if transform_mode == "imagenet":
-        # Lighter augmentations than RandomResizedCrop to speed up on CPU
+    if transform_mode == "imagenet_strong":
+        train_transform = transforms.Compose([
+            transforms.RandomResizedCrop(
+                image_size,
+                scale=(0.6, 1.0),
+                interpolation=transforms.InterpolationMode.BILINEAR,
+            ),
+            transforms.RandomHorizontalFlip(),
+            transforms.AutoAugment(policy=transforms.AutoAugmentPolicy.IMAGENET),
+            transforms.ToTensor(),
+            transforms.Normalize(_IMAGENET_MEAN, _IMAGENET_STD),
+            transforms.RandomErasing(p=0.25, scale=(0.02, 0.2), ratio=(0.3, 3.3)),
+        ])
+        val_test_transform = transforms.Compose([
+            transforms.Resize(image_size, interpolation=transforms.InterpolationMode.BILINEAR),
+            transforms.ToTensor(),
+            transforms.Normalize(_IMAGENET_MEAN, _IMAGENET_STD),
+        ])
+    elif transform_mode == "imagenet":
         train_transform = transforms.Compose([
             transforms.Resize(image_size, interpolation=transforms.InterpolationMode.BILINEAR),
             transforms.RandomHorizontalFlip(),
@@ -132,6 +149,19 @@ def get_transforms(transform_mode: str = "cifar", image_size: int = 256) -> Tupl
             transforms.Resize(image_size, interpolation=transforms.InterpolationMode.BILINEAR),
             transforms.ToTensor(),
             transforms.Normalize(_IMAGENET_MEAN, _IMAGENET_STD),
+        ])
+    elif transform_mode == "cifar_strong":
+        train_transform = transforms.Compose([
+            transforms.RandomCrop(32, padding=4),
+            transforms.RandomHorizontalFlip(),
+            transforms.TrivialAugmentWide(),
+            transforms.ToTensor(),
+            transforms.Normalize(_CIFAR100_MEAN, _CIFAR100_STD),
+            transforms.RandomErasing(p=0.25),
+        ])
+        val_test_transform = transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize(_CIFAR100_MEAN, _CIFAR100_STD),
         ])
     else:
         train_transform = transforms.Compose([
@@ -152,7 +182,7 @@ def get_datasets(
     val_split: int,
     seed: int,
     transform_mode: str = "cifar",
-    image_size: int = 256,
+    image_size: int = 128,
 ) -> Tuple[Dataset, Dataset, Dataset, list[str]]:
     """
     Load CIFAR-100 datasets with deterministic train/val split.
@@ -204,7 +234,7 @@ def get_dataloaders(
     pin_memory: bool = False,
     persistent_workers: bool | None = None,
     transform_mode: str = "cifar",
-    image_size: int = 256,
+    image_size: int = 128,
 ) -> Tuple[DataLoader, DataLoader, DataLoader, list[str]]:
     """
     Build CIFAR-100 data loaders with deterministic train/val split.
