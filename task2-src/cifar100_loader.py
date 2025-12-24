@@ -18,6 +18,9 @@ from torchvision import transforms
 _CIFAR100_MEAN = [0.5071, 0.4867, 0.4408]
 _CIFAR100_STD = [0.2675, 0.2565, 0.2761]
 
+_IMAGENET_MEAN = [0.485, 0.456, 0.406]
+_IMAGENET_STD = [0.229, 0.224, 0.225]
+
 
 def _unpickle(file_path: Path) -> dict:
     """
@@ -42,37 +45,44 @@ class CIFAR100Dataset(Dataset):
         train: bool = True,
         transform: Callable | None = None,
     ):
-        """
-        Initialize CIFAR-100 dataset from local files.
-        
-        :param root: Root directory containing CIFAR-100 files (train, test, meta).
-        :param train: If True, load training data; otherwise load test data.
-        :param transform: Optional transform to apply to images.
-        """
         self.root = Path(root)
         self.train = train
         self.transform = transform
-        
-        # Load data from appropriate file
-        data_file = self.root / ('train' if train else 'test')
+
+        # Resolve primary and fallback paths
+        split_name = 'train' if train else 'test'
+        data_file = self.root / split_name
+
         if not data_file.exists():
-            raise FileNotFoundError(f"Expected data file at {data_file}")
-        
+            # Fallback to repo layout: <this_file>/../dataset/cifar100
+            script_dir = Path(__file__).resolve().parent
+            alt_root = script_dir.parent / "dataset" / "cifar100"
+            alt_data_file = alt_root / split_name
+            if alt_data_file.exists():
+                self.root = alt_root
+                data_file = alt_data_file
+            else:
+                raise FileNotFoundError(f"Expected data file at {data_file}")
+
         data_dict = _unpickle(data_file)
-        
+
         # Extract images and labels
-        # data is shape (N, 3072) in RGB format
         self.data = data_dict[b'data']
         self.targets = data_dict[b'fine_labels']
-        
-        # Reshape to (N, 3, 32, 32) and transpose to (N, 32, 32, 3) for PIL
         self.data = self.data.reshape(-1, 3, 32, 32).transpose(0, 2, 3, 1)
-        
-        # Load class names
+
+        # Load class names (with the same fallback)
         meta_file = self.root / 'meta'
         if not meta_file.exists():
-            raise FileNotFoundError(f"Expected meta file at {meta_file}")
-        
+            script_dir = Path(__file__).resolve().parent
+            alt_root = script_dir.parent / "dataset" / "cifar100"
+            alt_meta = alt_root / 'meta'
+            if alt_meta.exists():
+                meta_file = alt_meta
+                self.root = alt_root
+            else:
+                raise FileNotFoundError(f"Expected meta file at {meta_file}")
+
         meta_dict = _unpickle(meta_file)
         self.classes = [name.decode('utf-8') for name in meta_dict[b'fine_label_names']]
     
@@ -103,24 +113,37 @@ class CIFAR100Dataset(Dataset):
         return img, target
 
 
-def get_transforms() -> Tuple[Callable, Callable]:
+def get_transforms(transform_mode: str = "cifar", image_size: int = 128) -> Tuple[Callable, Callable]:
     """
-    Build train and validation/test transforms for CIFAR-100.
-
-    :return: Tuple of (train_transform, val_test_transform).
+    Build train and val/test transforms.
+    Modes:
+      - 'cifar': 32x32, CIFAR-100 normalization
+      - 'imagenet': resize to `image_size`, ImageNet normalization (for pretrained backbones)
     """
-    train_transform = transforms.Compose([
-        transforms.RandomCrop(32, padding=4),
-        transforms.RandomHorizontalFlip(),
-        transforms.ToTensor(),
-        transforms.Normalize(_CIFAR100_MEAN, _CIFAR100_STD),
-    ])
-
-    val_test_transform = transforms.Compose([
-        transforms.ToTensor(),
-        transforms.Normalize(_CIFAR100_MEAN, _CIFAR100_STD),
-    ])
-
+    if transform_mode == "imagenet":
+        # Lighter augmentations than RandomResizedCrop to speed up on CPU
+        train_transform = transforms.Compose([
+            transforms.Resize(image_size, interpolation=transforms.InterpolationMode.BILINEAR),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            transforms.Normalize(_IMAGENET_MEAN, _IMAGENET_STD),
+        ])
+        val_test_transform = transforms.Compose([
+            transforms.Resize(image_size, interpolation=transforms.InterpolationMode.BILINEAR),
+            transforms.ToTensor(),
+            transforms.Normalize(_IMAGENET_MEAN, _IMAGENET_STD),
+        ])
+    else:
+        train_transform = transforms.Compose([
+            transforms.RandomCrop(32, padding=4),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            transforms.Normalize(_CIFAR100_MEAN, _CIFAR100_STD),
+        ])
+        val_test_transform = transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize(_CIFAR100_MEAN, _CIFAR100_STD),
+        ])
     return train_transform, val_test_transform
 
 
@@ -128,16 +151,13 @@ def get_datasets(
     data_root: str,
     val_split: int,
     seed: int,
+    transform_mode: str = "cifar",
+    image_size: int = 128,
 ) -> Tuple[Dataset, Dataset, Dataset, list[str]]:
     """
     Load CIFAR-100 datasets with deterministic train/val split.
-
-    :param data_root: Root directory for dataset storage.
-    :param val_split: Number of validation samples to split from train.
-    :param seed: Random seed for reproducible split.
-    :return: Tuple of (train_dataset, val_dataset, test_dataset, class_names).
     """
-    train_transform, val_test_transform = get_transforms()
+    train_transform, val_test_transform = get_transforms(transform_mode=transform_mode, image_size=image_size)
 
     # Full training set (with train transforms)
     full_train = CIFAR100Dataset(
@@ -147,7 +167,7 @@ def get_datasets(
     )
     class_names = full_train.classes
 
-    # Deterministic split into train/val indices
+    # Deterministic split into train/val
     train_size = len(full_train) - val_split
     generator = torch.Generator().manual_seed(seed)
     train_subset, val_subset_with_train_tx = random_split(
@@ -155,9 +175,9 @@ def get_datasets(
         [train_size, val_split],
         generator=generator,
     )
-    val_indices = val_subset_with_train_tx.indices  # reuse exact indices for val
+    val_indices = val_subset_with_train_tx.indices
 
-    # Validation dataset with val/test transforms, same indices
+    # Validation dataset with val/test transforms
     full_train_val_tx = CIFAR100Dataset(
         root=data_root,
         train=True,
@@ -183,18 +203,11 @@ def get_dataloaders(
     seed: int = 42,
     pin_memory: bool = False,
     persistent_workers: bool | None = None,
+    transform_mode: str = "cifar",
+    image_size: int = 128,
 ) -> Tuple[DataLoader, DataLoader, DataLoader, list[str]]:
     """
     Build CIFAR-100 data loaders with deterministic train/val split.
-
-    :param data_root: Root directory for dataset storage.
-    :param batch_size: Batch size for all loaders.
-    :param num_workers: Number of data loading workers.
-    :param val_split: Number of validation samples (from 50k train).
-    :param seed: Random seed for reproducible split.
-    :param pin_memory: Whether to pin memory for faster GPU transfer.
-    :param persistent_workers: Keep workers alive between epochs (auto-set if None).
-    :return: Tuple of (train_loader, val_loader, test_loader, class_names).
     """
     if persistent_workers is None:
         persistent_workers = num_workers > 0
@@ -203,6 +216,8 @@ def get_dataloaders(
         data_root=data_root,
         val_split=val_split,
         seed=seed,
+        transform_mode=transform_mode,
+        image_size=image_size,
     )
 
     train_loader = DataLoader(
@@ -212,6 +227,7 @@ def get_dataloaders(
         num_workers=num_workers,
         pin_memory=pin_memory,
         persistent_workers=persistent_workers,
+        prefetch_factor=2 if num_workers > 0 else None,
         drop_last=True,
     )
 
@@ -222,6 +238,7 @@ def get_dataloaders(
         num_workers=num_workers,
         pin_memory=pin_memory,
         persistent_workers=persistent_workers,
+        prefetch_factor=2 if num_workers > 0 else None,
         drop_last=False,
     )
 
@@ -232,6 +249,7 @@ def get_dataloaders(
         num_workers=num_workers,
         pin_memory=pin_memory,
         persistent_workers=persistent_workers,
+        prefetch_factor=2 if num_workers > 0 else None,
         drop_last=False,
     )
 
