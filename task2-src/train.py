@@ -65,7 +65,7 @@ def main():
     parser.add_argument("--arch", type=str, default="resnet18", choices=["cnn","resnet18","resnet50","densenet121"])
     parser.add_argument("--pretrained", type=int, default=1)  # 1=True, 0=False
     parser.add_argument("--freeze-features", type=int, default=1)
-    parser.add_argument("--image-size", type=int, default=128)
+    parser.add_argument("--image-size", type=int, default=256)
     args = parser.parse_args()
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
