@@ -2,6 +2,9 @@
 from pathlib import Path
 
 import argparse
+import math
+import random
+import numpy as np
 import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
@@ -41,6 +44,17 @@ def build_model(arch: str, num_classes: int, pretrained: bool) -> nn.Module:
     if arch == "densenet121":
         w = models.DenseNet121_Weights.IMAGENET1K_V1 if pretrained else None
         m = models.densenet121(weights=w); m.classifier = nn.Linear(m.classifier.in_features, num_classes); return m
+    if arch == "mobilenet_v3_small":
+        w = models.MobileNet_V3_Small_Weights.IMAGENET1K_V1 if pretrained else None
+        m = models.mobilenet_v3_small(weights=w)
+        in_features = m.classifier[3].in_features
+        m.classifier[3] = nn.Linear(in_features, num_classes)
+        return m
+    if arch == "shufflenet_v2_x1_0":
+        w = models.ShuffleNet_V2_X1_0_Weights.IMAGENET1K_V1 if pretrained else None
+        m = models.shufflenet_v2_x1_0(weights=w)
+        m.fc = nn.Linear(m.fc.in_features, num_classes)
+        return m
     raise ValueError(f"Unknown arch: {arch}")
 
 def accuracy_topk(outputs, targets, topk=(1,)):
@@ -61,14 +75,32 @@ def main():
     parser.add_argument("--num-workers", type=int, default=4)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--epochs", type=int, default=20)
-    parser.add_argument("--lr", type=float, default=1e-3)
-    parser.add_argument("--arch", type=str, default="resnet18", choices=["cnn","resnet18","resnet50","densenet121"])
-    parser.add_argument("--pretrained", type=int, default=1)  # 1=True, 0=False
+    parser.add_argument("--lr", type=float, default=1e-2)
+    parser.add_argument("--arch", type=str, default="mobilenet_v3_small", choices=["cnn","resnet18","resnet50","densenet121","mobilenet_v3_small","shufflenet_v2_x1_0"])
+    parser.add_argument("--pretrained", type=int, default=1)
     parser.add_argument("--freeze-features", type=int, default=1)
-    parser.add_argument("--image-size", type=int, default=256)
+    parser.add_argument("--unfreeze-epoch", type=int, default=5)
+    parser.add_argument("--lr-head-mult", type=float, default=10.0)
+    parser.add_argument("--image-size", type=int, default=128)
+    parser.add_argument("--device", type=str, default="cpu", choices=["cpu","cuda"])
+    parser.add_argument("--augment", type=str, default="light", choices=["light","strong"])
+    parser.add_argument("--optimizer", type=str, default="sgd", choices=["sgd","adamw"])
+    parser.add_argument("--momentum", type=float, default=0.9)
+    parser.add_argument("--weight-decay", type=float, default=1e-4)
+    parser.add_argument("--label-smoothing", type=float, default=0.1)
+    parser.add_argument("--mixup-alpha", type=float, default=0.0)
+    parser.add_argument("--cutmix-alpha", type=float, default=0.0)
+    parser.add_argument("--cutmix-prob", type=float, default=0.0)
+    parser.add_argument("--cpu-threads", type=int, default=0)
     args = parser.parse_args()
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    if args.cpu_threads and args.cpu_threads > 0:
+        try:
+            torch.set_num_threads(args.cpu_threads)
+        except Exception:
+            pass
+
+    device = torch.device(args.device)
     print("Using device:", device)
 
     data_root_path = Path(args.data_root)
@@ -78,7 +110,10 @@ def main():
         data_root_path = alt
     print(f"Using data root: {data_root_path}")
 
-    transform_mode = "imagenet" if args.arch != "cnn" else "cifar"
+    if args.arch != "cnn":
+        transform_mode = "imagenet_strong" if args.augment == "strong" else "imagenet"
+    else:
+        transform_mode = "cifar_strong" if args.augment == "strong" else "cifar"
     train_loader, val_loader, test_loader, class_names = get_dataloaders(
         data_root=str(data_root_path),
         batch_size=args.batch_size,
@@ -99,8 +134,29 @@ def main():
         elif hasattr(model, "classifier"):
             for p in model.classifier.parameters(): p.requires_grad = True
 
-    criterion = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=args.lr, weight_decay=5e-4)
+    criterion = nn.CrossEntropyLoss(label_smoothing=args.label_smoothing)
+    # Differential LR: backbone vs head for non-CNN
+    if args.arch == "cnn":
+        params = list(filter(lambda p: p.requires_grad, model.parameters()))
+        param_groups = [{"params": params, "lr": args.lr}]
+    else:
+        head_params = []
+        backbone_params = []
+        for name, p in model.named_parameters():
+            if not p.requires_grad:
+                continue
+            if ("fc." in name) or ("classifier." in name):
+                head_params.append(p)
+            else:
+                backbone_params.append(p)
+        param_groups = [
+            {"params": backbone_params, "lr": args.lr},
+            {"params": head_params, "lr": args.lr * args.lr_head_mult},
+        ]
+    if args.optimizer == "sgd":
+        optimizer = optim.SGD(param_groups, lr=args.lr, momentum=args.momentum, weight_decay=args.weight_decay, nesterov=True)
+    else:
+        optimizer = optim.AdamW(param_groups, lr=args.lr, weight_decay=args.weight_decay)
     scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=max(1, args.epochs // 3), gamma=0.1)
 
     train_losses, valid_losses, val_top1_hist, val_top5_hist = [], [], [], []
@@ -108,13 +164,45 @@ def main():
     ckpt_path = results_dir / "best_model.pt"; plot_path = results_dir / "train_curve.png"
 
     best_val_top1 = 0.0
+    rng = np.random.RandomState(args.seed)
+    torch.manual_seed(args.seed); random.seed(args.seed)
     for epoch in range(1, args.epochs + 1):
         print(f"Generating epoch {epoch:03d}/{args.epochs:03d}...")
+        # Optional progressive unfreeze for pretrained backbones
+        if args.arch != "cnn" and bool(args.freeze_features) and args.unfreeze_epoch > 0 and epoch == args.unfreeze_epoch:
+            for p in model.parameters(): p.requires_grad = True
+            print("Unfroze backbone parameters.")
         model.train(); train_loss = 0.0
         for data, target in train_loader:
-            data = data.to(device); target = target.to(device)
-            optimizer.zero_grad(); output = model(data)
-            loss = criterion(output, target); loss.backward(); optimizer.step()
+            data = data.to(device)
+            target = target.to(device)
+            use_cutmix = (args.cutmix_alpha > 0 and rng.rand() < args.cutmix_prob)
+            use_mixup = (args.mixup_alpha > 0 and not use_cutmix)
+            lam = 1.0; target_a = target; target_b = target
+            if use_mixup:
+                lam = rng.beta(args.mixup_alpha, args.mixup_alpha)
+                index = torch.randperm(data.size(0), device=data.device)
+                data = lam * data + (1 - lam) * data[index]
+                target_a, target_b = target, target[index]
+            elif use_cutmix:
+                lam = rng.beta(args.cutmix_alpha, args.cutmix_alpha)
+                W = data.size(-1); H = data.size(-2)
+                cut_rat = math.sqrt(1. - lam)
+                cut_w = int(W * cut_rat); cut_h = int(H * cut_rat)
+                cx = rng.randint(W); cy = rng.randint(H)
+                bbx1 = max(cx - cut_w // 2, 0); bby1 = max(cy - cut_h // 2, 0)
+                bbx2 = min(cx + cut_w // 2, W); bby2 = min(cy + cut_h // 2, H)
+                index = torch.randperm(data.size(0), device=data.device)
+                data[:, :, bby1:bby2, bbx1:bbx2] = data[index, :, bby1:bby2, bbx1:bbx2]
+                target_a, target_b = target, target[index]
+                lam = 1 - ((bbx2 - bbx1) * (bby2 - bby1) / (W * H))
+            optimizer.zero_grad()
+            output = model(data)
+            if use_mixup or use_cutmix:
+                loss = criterion(output, target_a) * lam + criterion(output, target_b) * (1. - lam)
+            else:
+                loss = criterion(output, target)
+            loss.backward(); optimizer.step()
             train_loss += loss.item() * data.size(0)
 
         model.eval(); valid_loss = 0.0; total = 0; sum_top1 = 0.0; sum_top5 = 0.0
@@ -152,7 +240,7 @@ def main():
     lines1, labels1 = ax1.get_legend_handles_labels()
     lines2, labels2 = ax2.get_legend_handles_labels()
     ax1.legend(lines1 + lines2, labels1 + labels2, loc="upper right")
-    plt.title("Loss & Accuracy against Epoch"); plt.tight_layout()
+    plt.title("Loss & Accuracy vs Epoch"); plt.tight_layout()
     plt.savefig(plot_path, dpi=150); plt.close()
     print(f"Saved best model to {ckpt_path}"); print(f"Saved training curve to {plot_path}")
 

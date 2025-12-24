@@ -50,6 +50,15 @@ def build_model(arch: str, num_classes: int) -> nn.Module:
         m = models.densenet121(weights=None)
         m.classifier = nn.Linear(m.classifier.in_features, num_classes)
         return m
+    elif a == "mobilenet_v3_small":
+        m = models.mobilenet_v3_small(weights=None)
+        in_features = m.classifier[3].in_features
+        m.classifier[3] = nn.Linear(in_features, num_classes)
+        return m
+    elif a == "shufflenet_v2_x1_0":
+        m = models.shufflenet_v2_x1_0(weights=None)
+        m.fc = nn.Linear(m.fc.in_features, num_classes)
+        return m
     else:
         raise ValueError(f"Unknown arch: {arch}")
 
@@ -132,7 +141,7 @@ def main():
     parser.add_argument("--num-workers", type=int, default=4)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--save-dir", type=str, default=str((script_dir / "results" / "eval").resolve()))
-    parser.add_argument("--image-size", type=int, default=256)
+    parser.add_argument("--image-size", type=int, default=128)
     args = parser.parse_args()
 
     # Load checkpoint metadata
