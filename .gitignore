@@ -4,3 +4,4 @@
 /task2-src/__pycache__
 /task2-src/results
 .DS_Store
+run_train_with_progress.py

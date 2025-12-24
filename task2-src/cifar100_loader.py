@@ -113,7 +113,7 @@ class CIFAR100Dataset(Dataset):
         return img, target
 
 
-def get_transforms(transform_mode: str = "cifar", image_size: int = 128) -> Tuple[Callable, Callable]:
+def get_transforms(transform_mode: str = "cifar", image_size: int = 256) -> Tuple[Callable, Callable]:
     """
     Build train and val/test transforms.
     Modes:
@@ -152,7 +152,7 @@ def get_datasets(
     val_split: int,
     seed: int,
     transform_mode: str = "cifar",
-    image_size: int = 128,
+    image_size: int = 256,
 ) -> Tuple[Dataset, Dataset, Dataset, list[str]]:
     """
     Load CIFAR-100 datasets with deterministic train/val split.
@@ -204,7 +204,7 @@ def get_dataloaders(
     pin_memory: bool = False,
     persistent_workers: bool | None = None,
     transform_mode: str = "cifar",
-    image_size: int = 128,
+    image_size: int = 256,
 ) -> Tuple[DataLoader, DataLoader, DataLoader, list[str]]:
     """
     Build CIFAR-100 data loaders with deterministic train/val split.

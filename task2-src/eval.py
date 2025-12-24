@@ -132,7 +132,7 @@ def main():
     parser.add_argument("--num-workers", type=int, default=4)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--save-dir", type=str, default=str((script_dir / "results" / "eval").resolve()))
-    parser.add_argument("--image-size", type=int, default=128)
+    parser.add_argument("--image-size", type=int, default=256)
     args = parser.parse_args()
 
     # Load checkpoint metadata
