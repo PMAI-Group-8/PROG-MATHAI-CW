@@ -14,13 +14,14 @@ class NeuralNetwork:
         self.optimiser = optimiser if optimiser else SGD(learning_rate=0.01)
         self.loss_function = SoftmaxCrossEntropy()
  
-        for cfg in layer_config:
+        for i,cfg in enumerate(layer_config):
             self.layers.append(NeuronLayer(
                 cfg['n_inputs'],
                 cfg['n_neurons'],
                 cfg.get('activation'),
                 cfg.get('dropout'),
-                cfg.get('l2')
+                cfg.get('l2'),
+                layer_id=i
                 )
             )
  
@@ -73,10 +74,15 @@ class NeuralNetwork:
  
                 self.backward(dLoss)
  
-            if epoch % 10 == 0:
-                val_accuracy = self.accuracy(X_val, y_val)
+            if epoch % 10 == 0 or epoch == epochs - 1:
                 train_accuracy = self.accuracy(X, Y_true)
-                print(f"Epoch {epoch}, Loss: {loss:.4f}, Training Accuracy: {train_accuracy:.2f}, Validation Accuracy: {val_accuracy:.2f}")
+                val_accuracy = self.accuracy(X_val, y_val)
+                print(
+                    f"Epoch {epoch}, "
+                    f"Loss: {loss:.4f}, "
+                    f"Training Accuracy: {train_accuracy:.2f}, "
+                    f"Validation Accuracy: {val_accuracy:.2f}"
+                )
                 
     '''Predict class labels for given input'''
     def predict(self, X):
