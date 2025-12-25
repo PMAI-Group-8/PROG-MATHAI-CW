@@ -5,7 +5,7 @@ np.random.seed(42)
 class NeuronLayer:
     def __init__(self, n_inputs, n_outputs, 
         activation = None, dropout = None, 
-        l2 = None):
+        l2 = None, layer_id = None):
         
         self.W = np.random.randn(n_inputs, n_outputs) * np.sqrt(2 / n_inputs)
         self.b = np.zeros((1, n_outputs))
@@ -13,6 +13,7 @@ class NeuronLayer:
         self.dropout = dropout
         self.l2 = l2
         self.l2 = l2
+        self.layer_id = layer_id
     
     ''' Forward pass through the layer '''
     def forward(self, X, training=True):
