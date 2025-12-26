@@ -24,7 +24,10 @@ class NeuronLayer:
             A = self.activation.forward(self.Z)
         if self.dropout:
             A = self.dropout.forward(A, training)
+
+        self.A = A
         return A
+
     
     ''' Backward pass through the layer '''
     def backward(self, dA):
@@ -34,9 +37,12 @@ class NeuronLayer:
         if self.activation:
             dZ = self.activation.backward(dA)
 
-        dW = np.dot(self.X.T, dZ)
-        db = np.sum(dZ, axis=0, keepdims=True)
+        m = self.X.shape[0]
+
+        dW = np.dot(self.X.T, dZ) / m
+        db = np.sum(dZ, axis=0, keepdims=True) / m
         dX = np.dot(dZ, self.W.T)
+
 
         if self.l2 is not None:
             dW += self.l2.gradient(self.W)
