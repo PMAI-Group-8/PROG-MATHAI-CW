@@ -12,7 +12,6 @@ class NeuronLayer:
         self.activation = activation
         self.dropout = dropout
         self.l2 = l2
-        self.l2 = l2
         self.layer_id = layer_id
     
     ''' Forward pass through the layer '''
