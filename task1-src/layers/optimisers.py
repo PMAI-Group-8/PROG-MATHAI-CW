@@ -3,21 +3,25 @@ import numpy as np
 np.random.seed(42)
  
 class Optimiser:
+    # Base optimiser class – other optimisers inherit from this
     def update(self, layer, dW, db):
         raise NotImplementedError("This method should be overridden by subclasses.")
     
  
 class SGD(Optimiser):
     def __init__(self, learning_rate=0.01, decay=0.0):
+        # Initial learning rate is stored so decay can be applied over time
         self.initial_lr = learning_rate
         self.learning_rate = learning_rate
         self.decay = decay
         self.iterations = 0
  
     def update(self, layer, dW, db):
+        # Apply learning rate decay if enabled
         if self.decay > 0:
             self.learning_rate = self.initial_lr / (1 + self.decay * self.iterations)
  
+        # Standard SGD parameter update
         layer.W -= self.learning_rate * dW
         layer.b -= self.learning_rate * db
  
@@ -31,22 +35,28 @@ class SGDWithMomentum(Optimiser):
         self.decay = decay
         self.iterations = 0
  
+        # Velocity terms stored per layer
         self.vW = {}
         self.vb = {}
  
     def update(self, layer, dW, db):
+        # Apply learning rate decay if enabled
         if self.decay > 0:
             self.learning_rate = self.initial_lr / (1 + self.decay * self.iterations)
  
+        # Use layer_id to keep separate velocity terms per layer
         lid = layer.layer_id
  
+        # Initialise velocity terms on first update
         if lid not in self.vW:
             self.vW[lid] = np.zeros_like(dW)
             self.vb[lid] = np.zeros_like(db)
  
+        # Momentum update: combine previous velocity with current gradient
         self.vW[lid] = self.momentum * self.vW[lid] - self.learning_rate * dW
         self.vb[lid] = self.momentum * self.vb[lid] - self.learning_rate * db
  
+        # Apply updates to parameters
         layer.W += self.vW[lid]
         layer.b += self.vb[lid]
  
@@ -66,17 +76,20 @@ class Adam(Optimiser):
         self.decay = decay
         self.iterations = 0
  
+        # First and second moment estimates stored per layer
         self.mW = {}
         self.mb = {}
         self.vW = {}
         self.vb = {}
  
     def update(self, layer, dW, db):
+        # Apply learning rate decay if enabled
         if self.decay > 0:
             self.learning_rate = self.initial_lr / (1 + self.decay * self.iterations)
  
         lid = layer.layer_id
  
+        # Initialise moment estimates on first update
         if lid not in self.mW:
             self.mW[lid] = np.zeros_like(dW)
             self.mb[lid] = np.zeros_like(db)

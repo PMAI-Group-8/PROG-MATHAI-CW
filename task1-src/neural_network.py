@@ -56,23 +56,22 @@ class NeuralNetwork:
         return one_hot
     
     ''' Train the neural network '''
-    def train(self, X, Y_true, X_val, y_val,
-          epochs=100, batch_size=32, data_catcher=None):
-
+    def train(self, X, Y_true, X_val, y_val, epochs = 100, batch_size=32):
         y_onehot = self.one_hot_encode(Y_true, num_classes=10)
         n = X.shape[0]
-
+ 
         for epoch in range(epochs):
             idx = np.random.permutation(n)
             X_shuffled = X[idx]
-            y_shuffled = y_onehot[idx]
-
+            y_onehot_shuffled = y_onehot[idx]
             for i in range(0, n, batch_size):
                 X_batch = X_shuffled[i:i+batch_size]
-                y_batch = y_shuffled[i:i+batch_size]
-
+                y_onehot_batch = y_onehot_shuffled[i:i+batch_size]
+ 
                 Y_pred = self.forward(X_batch, training=True)
-                loss, dLoss = self.compute_loss_and_gradient(Y_pred, y_batch)
+ 
+                loss, dLoss = self.compute_loss_and_gradient(Y_pred, y_onehot_batch)
+ 
                 self.backward(dLoss)
 
             train_accuracy = self.accuracy(X, Y_true)
@@ -96,7 +95,6 @@ class NeuralNetwork:
                     f"Training Accuracy: {train_accuracy:.2f}, "
                     f"Validation Accuracy: {val_accuracy:.2f}"
                 )
-
                 
     '''Predict class labels for given input'''
     def predict(self, X):
