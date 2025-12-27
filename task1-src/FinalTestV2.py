@@ -23,22 +23,12 @@ LOG_DIR = "./task1-src/logs"
 # --------------------------------------------------
 EXPERIMENTS = [
     {
-        "name": "T1b_relu_sgd_bs256_epochs101",
-        "activation": "relu",
-        "batch_size": 256,
-        "epochs": 101,
-        "optimiser": "sgd",
-        "learning_rate": 0.1,
-        "momentum": None,
-        "l2": None
-    },
-    {
-        "name": "T1b_sigmoid_sgd_bs256_epochs101",
+        "name": "T1b_sigmoid_sgd_bs256_epochs150",
         "activation": "sigmoid",
         "batch_size": 256,
-        "epochs": 101,
+        "epochs": 150,
         "optimiser": "sgd",
-        "learning_rate": 0.05,
+        "learning_rate": 0.1,
         "momentum": None,
         "l2": None
     },

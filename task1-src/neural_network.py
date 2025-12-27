@@ -77,6 +77,9 @@ class NeuralNetwork:
 
             train_accuracy = self.accuracy(X, Y_true)
             val_accuracy = self.accuracy(X_val, y_val)
+            
+            if data_catcher:
+                data_catcher.log_activations(epoch, self.layers)
 
             if epoch % 10 == 0 or epoch == epochs - 1:
                 if data_catcher:
@@ -86,7 +89,6 @@ class NeuralNetwork:
                         train_accuracy,
                         val_accuracy
                 )
-                data_catcher.log_activations(epoch, self.layers)
 
                 print(
                     f"Epoch {epoch}, "
