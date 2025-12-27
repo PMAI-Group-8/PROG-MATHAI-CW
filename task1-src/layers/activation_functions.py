@@ -1,8 +1,14 @@
 import numpy as np
 
+# Fix random seed for reproducibility
 np.random.seed(42)
 
 class activation():
+    """
+    Base activation class.
+    All activation functions inherit from this and
+    implement their own forward and backward passes.
+    """
     def forward(self, Z):
         raise NotImplementedError("Forward method not implemented.")
     
