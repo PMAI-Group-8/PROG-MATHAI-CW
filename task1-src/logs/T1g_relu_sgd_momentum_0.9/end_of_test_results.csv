@@ -1,0 +1,16 @@
+key,value
+name,T1g_relu_sgd_momentum_0.9
+activation,relu
+activation_logging,False
+batch_size,256
+epochs,120
+optimiser,momentum
+learning_rate,0.05
+decay,
+momentum,0.9
+dropout,
+l2,
+final_test_accuracy,0.4874
+total_time_seconds,723.8137862682343
+seconds_per_epoch,6.031781552235286
+epochs_per_second,0.16578849736847903

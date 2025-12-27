@@ -56,7 +56,7 @@ class NeuralNetwork:
         return one_hot
     
     ''' Train the neural network '''
-    def train(self, X, Y_true, X_val, y_val, epochs = 100, batch_size=32):
+    def train(self, X, Y_true, X_val, y_val, epochs = 100, batch_size=32, data_catcher=None):
         y_onehot = self.one_hot_encode(Y_true, num_classes=10)
         n = X.shape[0]
  
@@ -73,10 +73,22 @@ class NeuralNetwork:
                 loss, dLoss = self.compute_loss_and_gradient(Y_pred, y_onehot_batch)
  
                 self.backward(dLoss)
- 
+
+            train_accuracy = self.accuracy(X, Y_true)
+            val_accuracy = self.accuracy(X_val, y_val)
+            
+            if data_catcher:
+                data_catcher.log_activations(epoch, self.layers)
+
             if epoch % 10 == 0 or epoch == epochs - 1:
-                train_accuracy = self.accuracy(X, Y_true)
-                val_accuracy = self.accuracy(X_val, y_val)
+                if data_catcher:
+                    data_catcher.log_metrics(
+                        epoch,
+                        loss,
+                        train_accuracy,
+                        val_accuracy
+                )
+
                 print(
                     f"Epoch {epoch}, "
                     f"Loss: {loss:.4f}, "

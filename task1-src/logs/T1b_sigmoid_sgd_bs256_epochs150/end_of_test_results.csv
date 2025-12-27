@@ -1,0 +1,16 @@
+key,value
+name,T1b_sigmoid_sgd_bs256_epochs150
+activation,sigmoid
+activation_logging,True
+batch_size,256
+epochs,150
+optimiser,sgd
+learning_rate,0.1
+decay,
+momentum,
+dropout,
+l2,
+final_test_accuracy,0.2932
+total_time_seconds,828.548172712326
+seconds_per_epoch,5.523654484748841
+epochs_per_second,0.1810395640714066

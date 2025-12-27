@@ -18,22 +18,6 @@ class DataCatcher:
     """
 
     def __init__(self, base_dir="logs", config=None):
-        """
-        Parameters
-        ----------
-        base_dir : str
-            Root logging directory (default: ./logs)
-
-        config : dict
-            Example:
-            {
-                "experiment_name": "relu_run_1",
-                "metrics": True,
-                "activation_logging": True,
-                "activation_type": "relu",  # or "sigmoid"
-                "layers": [0, 1, 2]
-            }
-        """
         if config is None:
             raise ValueError("DataCatcher requires a config dictionary")
 
@@ -102,26 +86,23 @@ class DataCatcher:
     # Activation logging
     # ------------------------------------------------------------------
     def log_activations(self, epoch, layers):
-        """
-        Parameters
-        ----------
-        epoch : int
-            Current epoch index
-
-        layers : list
-            List of NeuronLayer objects (your existing layers)
-        """
         if not self.activation_enabled:
             return
 
         for lid in self.layers_to_track:
             layer = layers[lid]
 
-            A = layer.A 
+            if not hasattr(layer, "A"):
+                continue  # safety guard
+
+            A = layer.A
+
             if self.activation_type == "relu":
                 dead = np.mean(A <= 0, axis=0)
+
             elif self.activation_type == "sigmoid":
                 dead = np.mean((A < 0.05) | (A > 0.95), axis=0)
+
             else:
                 raise ValueError("Unsupported activation type")
 
@@ -152,6 +133,38 @@ class DataCatcher:
                 # Rows
                 for i, row in enumerate(data):
                     writer.writerow([i] + list(row))
+    # ------------------------------------------------------------------
+    # End-of-test summary
+    # ------------------------------------------------------------------
+    def save_final_results(
+        self,
+        config,
+        final_test_accuracy,
+        total_time_seconds
+    ):
+        """
+        Saves experiment configuration and final results to CSV.
+        """
+
+        path = os.path.join(self.exp_dir, "end_of_test_results.csv")
+
+        epochs = config.get("epochs", 1)
+        seconds_per_epoch = total_time_seconds / epochs
+        epochs_per_second = epochs / total_time_seconds
+
+        with open(path, "w", newline="") as f:
+            writer = csv.writer(f)
+            writer.writerow(["key", "value"])
+
+            # ---- Experiment config ----
+            for k, v in config.items():
+                writer.writerow([k, v])
+
+            # ---- Final results ----
+            writer.writerow(["final_test_accuracy", float(final_test_accuracy)])
+            writer.writerow(["total_time_seconds", float(total_time_seconds)])
+            writer.writerow(["seconds_per_epoch", float(seconds_per_epoch)])
+            writer.writerow(["epochs_per_second", float(epochs_per_second)])
 
     # ------------------------------------------------------------------
     # Utility
