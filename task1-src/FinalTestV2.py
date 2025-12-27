@@ -9,6 +9,7 @@ from datacatcher import DataCatcher
 from layers.activation_functions import ReLU, Sigmoid
 from layers.optimisers import SGD, SGDWithMomentum, Adam
 from layers.l2_regulariser import L2Regularizer
+from layers.dropout import Dropout
 
 # --------------------------------------------------
 # Global settings
@@ -23,16 +24,29 @@ LOG_DIR = "./task1-src/logs"
 # --------------------------------------------------
 EXPERIMENTS = [
     {
-        "name": "T1b_sigmoid_sgd_bs256_epochs150",
-        "activation": "sigmoid",
+        "name": "T1d_relu_sgd_no_dropout",
+        "activation": "relu",
         "batch_size": 256,
         "epochs": 150,
         "optimiser": "sgd",
         "learning_rate": 0.1,
+        "dropout": None,
         "momentum": None,
         "l2": None
     },
+    {
+        "name": "T1d_relu_sgd_dropout0.5",
+        "activation": "relu",
+        "batch_size": 256,
+        "epochs": 150,
+        "optimiser": "sgd",
+        "learning_rate": 0.1,
+        "dropout": 0.5,
+        "momentum": None,
+        "l2": None
+    }
 ]
+
 
 # --------------------------------------------------
 # Helper functions
@@ -49,10 +63,11 @@ def build_optimiser(cfg):
         return Adam(learning_rate=cfg["learning_rate"])
     raise ValueError("Unknown optimiser")
 
-def build_layers(activation_name, l2):
+def build_layers(activation_name, l2, dropout_prob=None):
     """
-    IMPORTANT:
-    Each layer gets its OWN activation instance.
+    Builds network layers with optional inverted dropout.
+    Dropout is applied only to hidden layers.
+    Each layer gets its OWN activation and dropout instance.
     """
     if activation_name == "relu":
         act1 = ReLU()
@@ -63,29 +78,33 @@ def build_layers(activation_name, l2):
     else:
         raise ValueError("Unknown activation")
 
+    dropout1 = Dropout(dropout_prob) if dropout_prob else None
+    dropout2 = Dropout(dropout_prob) if dropout_prob else None
+
     return [
         {
             "n_inputs": 3072,
             "n_neurons": 1024,
             "activation": act1,
-            "dropout": None,
+            "dropout": dropout1,
             "l2": l2
         },
         {
             "n_inputs": 1024,
             "n_neurons": 256,
             "activation": act2,
-            "dropout": None,
+            "dropout": dropout2,
             "l2": l2
         },
         {
             "n_inputs": 256,
             "n_neurons": 10,
             "activation": None,
-            "dropout": None,
+            "dropout": None, 
             "l2": None
         }
     ]
+
 
 # --------------------------------------------------
 # Load data 
@@ -119,7 +138,7 @@ for cfg in EXPERIMENTS:
 
     l2 = L2Regularizer(cfg["l2"]) if cfg["l2"] else None
 
-    layer_config = build_layers(cfg["activation"], l2)
+    layer_config = build_layers(cfg["activation"], l2, dropout_prob=cfg["dropout"])
     optimiser = build_optimiser(cfg)
 
     # ---- DataCatcher ----
