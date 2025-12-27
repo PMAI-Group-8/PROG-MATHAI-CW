@@ -56,7 +56,7 @@ class NeuralNetwork:
         return one_hot
     
     ''' Train the neural network '''
-    def train(self, X, Y_true, X_val, y_val, epochs = 100, batch_size=32):
+    def train(self, X, Y_true, X_val, y_val, epochs = 100, batch_size=32, data_catcher=None):
         y_onehot = self.one_hot_encode(Y_true, num_classes=10)
         n = X.shape[0]
  

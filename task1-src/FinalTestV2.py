@@ -24,43 +24,164 @@ LOG_DIR = "./task1-src/logs"
 # --------------------------------------------------
 EXPERIMENTS = [
     {
-        "name": "T1d_relu_sgd_no_dropout",
+        "name": "T1b_relu_sgd_bs256_epochs150",
         "activation": "relu",
+        "activation_logging": True,
         "batch_size": 256,
         "epochs": 150,
         "optimiser": "sgd",
         "learning_rate": 0.1,
-        "dropout": None,
+        "decay" : None,
         "momentum": None,
+        "dropout": None,
+        "l2": None
+    },
+    {
+        "name": "T1b_sigmoid_sgd_bs256_epochs150",
+        "activation": "sigmoid",
+        "activation_logging": True,
+        "batch_size": 256,
+        "epochs": 150,
+        "optimiser": "sgd",
+        "learning_rate": 0.1,
+        "decay" : None,
+        "momentum": None,
+        "dropout": None,
+        "l2": None
+    },
+    {
+        "name": "T1d_relu_sgd_no_dropout",
+        "activation": "relu",
+        "activation_logging": True,
+        "batch_size": 256,
+        "epochs": 100,
+        "optimiser": "sgd",
+        "learning_rate": 0.05,
+        "decay" : None,
+        "momentum": None,
+        "dropout": None,
         "l2": None
     },
     {
         "name": "T1d_relu_sgd_dropout0.5",
         "activation": "relu",
+        "activation_logging": True,
+        "batch_size": 256,
+        "epochs": 100,
+        "optimiser": "sgd",
+        "learning_rate": 0.05,
+        "decay" : None,
+        "momentum": None,
+        "dropout": 0.5,
+        "l2": None
+    },
+    {
+        "name": "T1f_relu_sgd_momentum_0.8_l2_0.001",
+        "activation": "relu",
+        "activation_logging": False,
         "batch_size": 256,
         "epochs": 150,
         "optimiser": "sgd",
-        "learning_rate": 0.1,
-        "dropout": 0.5,
+        "learning_rate": 0.05,
+        "decay" : None,
+        "momentum": 0.8,
+        "dropout": None,
+        "l2": 0.001
+    },
+    {
+        "name": "T1f_relu_adam_l2_0.001",
+        "activation": "relu",
+        "activation_logging": False,
+        "batch_size": 256,
+        "epochs": 150,
+        "optimiser": "adam",
+        "learning_rate": 0.05,
+        "decay" : None,
         "momentum": None,
+        "dropout": None,
+        "l2": 0.001
+    },
+    {
+        "name": "T1g_relu_sgd_momentum_0.9",
+        "activation": "relu",
+        "activation_logging": False,
+        "batch_size": 256,
+        "epochs": 120,
+        "optimiser": "momentum",
+        "learning_rate": 0.05,
+        "decay": None,
+        "momentum": 0.9,
+        "dropout": None,
         "l2": None
+    },
+    {
+        "name": "T1g_relu_adam_lr_0.001",
+        "activation": "relu",
+        "activation_logging": False,
+        "batch_size": 256,
+        "epochs": 100,
+        "optimiser": "adam",
+        "learning_rate": 0.001,
+        "decay": None,
+        "momentum": None,
+        "dropout": None,
+        "l2": None
+    },
+    {
+        "name": "T1g_relu_dropout0.8",
+        "activation": "relu",
+        "activation_logging": False,
+        "batch_size": 256,
+        "epochs": 150,
+        "optimiser": "sgd",
+        "learning_rate": 0.05,
+        "decay": 1e-3,
+        "momentum": None,
+        "dropout": 0.8,
+        "l2": None
+    },
+    {
+        "name": "T1g_relu_l2_0.0005",
+        "activation": "relu",
+        "activation_logging": False,
+        "batch_size": 256,
+        "epochs": 150,
+        "optimiser": "sgd",
+        "learning_rate": 0.05,
+        "decay": 1e-3,
+        "momentum": None,
+        "dropout": None,
+        "l2": 0.0005
+    },
+    {
+        "name": "T1g_relu_dropout0.3_l2_0.0005",
+        "activation": "relu",
+        "activation_logging": False,
+        "batch_size": 256,
+        "epochs": 150,
+        "optimiser": "sgd",
+        "learning_rate": 0.05,
+        "decay": 1e-3,
+        "momentum": None,
+        "dropout": 0.8,
+        "l2": 0.0005
     }
 ]
-
 
 # --------------------------------------------------
 # Helper functions
 # --------------------------------------------------
 def build_optimiser(cfg):
     if cfg["optimiser"] == "sgd":
-        return SGD(learning_rate=cfg["learning_rate"])
+        return SGD(learning_rate=cfg["learning_rate"], decay=cfg["decay"] if cfg["decay"] else 0.0)
     if cfg["optimiser"] == "momentum":
         return SGDWithMomentum(
             learning_rate=cfg["learning_rate"],
-            momentum=cfg["momentum"]
+            momentum=cfg["momentum"],
+            decay=cfg["decay"] if cfg["decay"] else 0.0
         )
     if cfg["optimiser"] == "adam":
-        return Adam(learning_rate=cfg["learning_rate"])
+        return Adam(learning_rate=cfg["learning_rate"], decay=cfg["decay"] if cfg["decay"] else 0.0)
     raise ValueError("Unknown optimiser")
 
 def build_layers(activation_name, l2, dropout_prob=None):
@@ -147,7 +268,7 @@ for cfg in EXPERIMENTS:
         config={
             "experiment_name": cfg["name"],
             "metrics": True,
-            "activation_logging": True,
+            "activation_logging": cfg["activation_logging"],
             "activation_type": cfg["activation"],
             "layers": [0, 1]
         }
@@ -176,8 +297,20 @@ for cfg in EXPERIMENTS:
 
     data_catcher.save_activation_logs()
 
+    seconds_per_epoch = duration / cfg["epochs"]
+    epochs_per_second = cfg["epochs"] / duration
+
+    data_catcher.save_final_results(
+        config=cfg,
+        final_test_accuracy=test_acc,
+        total_time_seconds=duration
+    )
+
     print(f"Finished {cfg['name']}")
-    print(f"Test accuracy: {test_acc:.4f}")
-    print(f"Time taken  : {duration:.2f}s")
+    print(f"Final test accuracy   : {test_acc:.4f}")
+    print(f"Total time taken     : {duration:.2f}s")
+    print(f"Seconds per epoch    : {seconds_per_epoch:.3f}s")
+    print(f"Epochs per second    : {epochs_per_second:.3f}")
+
 
 print("\nAll experiments completed.")
