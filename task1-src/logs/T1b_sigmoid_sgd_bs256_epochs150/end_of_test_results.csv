@@ -1,16 +1,12 @@
 key,value
 name,T1b_sigmoid_sgd_bs256_epochs150
-activation,sigmoid
-activation_logging,True
 batch_size,256
-epochs,150
-optimiser,sgd
+epochs,100
 learning_rate,0.1
-decay,
-momentum,
-dropout,
-l2,
-final_test_accuracy,0.2932
-total_time_seconds,828.548172712326
-seconds_per_epoch,5.523654484748841
-epochs_per_second,0.1810395640714066
+optimiser,"{'type': 'sgd', 'decay': 0.0}"
+layers,"[{'n_neurons': 1024, 'activation': 'sigmoid', 'dropout': None, 'l2': None}, {'n_neurons': 256, 'activation': 'sigmoid', 'dropout': None, 'l2': None}, {'n_neurons': 10, 'activation': None, 'dropout': None, 'l2': None}]"
+logging,"{'metrics': True, 'activations': True, 'activation_type': 'sigmoid', 'log_frequency': 10}"
+final_test_accuracy,0.2805
+total_time_seconds,472.1777448654175
+seconds_per_epoch,4.721777448654175
+epochs_per_second,0.21178465331631102

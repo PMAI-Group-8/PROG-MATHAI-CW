@@ -1,16 +1,12 @@
 key,value
 name,T1b_relu_sgd_bs256_epochs150
-activation,relu
-activation_logging,True
 batch_size,256
-epochs,150
-optimiser,sgd
+epochs,100
 learning_rate,0.1
-decay,
-momentum,
-dropout,
-l2,
-final_test_accuracy,0.432
-total_time_seconds,729.831805229187
-seconds_per_epoch,4.86554536819458
-epochs_per_second,0.20552680621105013
+optimiser,"{'type': 'sgd', 'decay': 0.0}"
+layers,"[{'n_neurons': 1024, 'activation': 'relu', 'dropout': None, 'l2': None}, {'n_neurons': 256, 'activation': 'relu', 'dropout': None, 'l2': None}, {'n_neurons': 10, 'activation': None, 'dropout': None, 'l2': None}]"
+logging,"{'metrics': True, 'activations': True, 'activation_type': 'relu', 'log_frequency': 10}"
+final_test_accuracy,0.4113
+total_time_seconds,427.58483266830444
+seconds_per_epoch,4.275848326683044
+epochs_per_second,0.23387171938714255

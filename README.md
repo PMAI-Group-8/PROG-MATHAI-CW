@@ -24,7 +24,3 @@ Group 8, coursework for Programming and Mathematics for AI class
     - ```dataset/```
         - ```cifar10/``` (batch files and metadata)
         - ```cifar100/``` (```train```, ```test```, ```meta```, etc.)
-
-
-## How to use 
-1. tbc
