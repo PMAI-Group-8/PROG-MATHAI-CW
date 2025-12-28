@@ -14,7 +14,7 @@ class NeuralNetwork:
         self.optimiser = optimiser if optimiser else SGD(learning_rate=0.01)
         self.loss_function = SoftmaxCrossEntropy()
  
-        for i,cfg in enumerate(layer_config):
+        for i, cfg in enumerate(layer_config):
             self.layers.append(NeuronLayer(
                 cfg['n_inputs'],
                 cfg['n_neurons'],
@@ -27,7 +27,7 @@ class NeuralNetwork:
  
     ''' Forward pass through the network '''
     ''' Result is not one-hot encoded; softmax is applied in the loss function '''
-    def forward(self, X, training = True):
+    def forward(self, X, training=True):
         for layer in self.layers:
             X = layer.forward(X, training)
         return X
@@ -36,8 +36,7 @@ class NeuralNetwork:
     def backward(self, dLoss):
         for layer in reversed(self.layers):
             dLoss, dW, db = layer.backward(dLoss)
-            if self.optimiser:
-                self.optimiser.update(layer, dW, db)
+            self.optimiser.update(layer, dW, db)
         return dLoss
     
     ''' Compute loss and its gradient '''
@@ -51,43 +50,43 @@ class NeuralNetwork:
     
     ''' One-hot encode labels '''
     def one_hot_encode(self, y, num_classes):
-        one_hot = np.zeros((y.shape[0], num_classes))
-        one_hot[np.arange(y.shape[0]), y] = 1
+        one_hot = np.zeros((y.size, num_classes))
+        one_hot[np.arange(y.size), y] = 1
         return one_hot
     
     ''' Train the neural network '''
-    def train(self, X, Y_true, X_val, y_val, epochs = 100, batch_size=32, data_catcher=None):
+    def train(self, X, Y_true, X_val, y_val, epochs=100, batch_size=32, data_catcher=None):
         y_onehot = self.one_hot_encode(Y_true, num_classes=10)
         n = X.shape[0]
+        n_batches = (n + batch_size - 1) // batch_size  # Pre-compute number of batches
  
         for epoch in range(epochs):
+            # Shuffle data
             idx = np.random.permutation(n)
             X_shuffled = X[idx]
             y_onehot_shuffled = y_onehot[idx]
+            
+            # Mini-batch training
             for i in range(0, n, batch_size):
                 X_batch = X_shuffled[i:i+batch_size]
                 y_onehot_batch = y_onehot_shuffled[i:i+batch_size]
  
                 Y_pred = self.forward(X_batch, training=True)
- 
                 loss, dLoss = self.compute_loss_and_gradient(Y_pred, y_onehot_batch)
- 
                 self.backward(dLoss)
 
-            train_accuracy = self.accuracy(X, Y_true)
-            val_accuracy = self.accuracy(X_val, y_val)
+            # Logging and metrics
+            should_log = (epoch % 10 == 0) or (epoch == epochs - 1)
             
             if data_catcher:
                 data_catcher.log_activations(epoch, self.layers)
-
-            if epoch % 10 == 0 or epoch == epochs - 1:
+            
+            if should_log:
+                train_accuracy = self.accuracy(X, Y_true)
+                val_accuracy = self.accuracy(X_val, y_val)
+                
                 if data_catcher:
-                    data_catcher.log_metrics(
-                        epoch,
-                        loss,
-                        train_accuracy,
-                        val_accuracy
-                )
+                    data_catcher.log_metrics(epoch, loss, train_accuracy, val_accuracy)
 
                 print(
                     f"Epoch {epoch}, "
@@ -99,8 +98,7 @@ class NeuralNetwork:
     '''Predict class labels for given input'''
     def predict(self, X):
         Y_pred = self.forward(X, training=False)
-        predictions = np.argmax(Y_pred, axis=1)
-        return predictions
+        return np.argmax(Y_pred, axis=1)
     
     ''' Calculate overall accuracy '''
     def accuracy(self, X, y_true):

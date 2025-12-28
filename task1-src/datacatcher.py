@@ -51,6 +51,7 @@ class DataCatcher:
         # ---- Activation logging ----
         self.activation_enabled = config.get("activation_logging", False)
         self.activation_type = config.get("activation_type", "relu")
+        self.activation_log_frequency = config.get("activation_log_frequency", 1)
         self.layers_to_track = config.get("layers", [])
 
         self.activation_buffers = {}
@@ -89,50 +90,34 @@ class DataCatcher:
         if not self.activation_enabled:
             return
 
+        # ---- Log only every N epochs ----
+        if epoch % self.activation_log_frequency != 0:
+            return
+
         for lid in self.layers_to_track:
             layer = layers[lid]
-
             if not hasattr(layer, "A"):
-                continue  # safety guard
+                continue
 
             A = layer.A
 
             if self.activation_type == "relu":
                 dead = np.mean(A <= 0, axis=0)
-
             elif self.activation_type == "sigmoid":
-                dead = np.mean((A < 0.05) | (A > 0.95), axis=0)
-
+                dead = np.mean((A < 0.01) | (A > 0.99), axis=0)
             else:
                 raise ValueError("Unsupported activation type")
 
-            self.activation_buffers[lid]["rows"].append(dead)
+            path = self.activation_buffers[lid]["path"]
+            write_header = not os.path.exists(path)
 
-    # ------------------------------------------------------------------
-    # Flush activation CSVs
-    # ------------------------------------------------------------------
-    def save_activation_logs(self):
-        """
-        Writes activation buffers to CSV files.
-        Rows = neurons
-        Columns = epochs
-        """
-        if not self.activation_enabled:
-            return
-
-        for lid, buffer in self.activation_buffers.items():
-            data = np.array(buffer["rows"]).T  # neurons x epochs
-
-            with open(buffer["path"], "w", newline="") as f:
+            with open(path, "a", newline="") as f:
                 writer = csv.writer(f)
-
-                # Header
-                header = ["neuron"] + [f"epoch_{i}" for i in range(data.shape[1])]
-                writer.writerow(header)
-
-                # Rows
-                for i, row in enumerate(data):
-                    writer.writerow([i] + list(row))
+                if write_header:
+                    writer.writerow(
+                        ["epoch"] + [f"neuron_{i}" for i in range(len(dead))]
+                    )
+                writer.writerow([epoch] + list(dead))
     # ------------------------------------------------------------------
     # End-of-test summary
     # ------------------------------------------------------------------

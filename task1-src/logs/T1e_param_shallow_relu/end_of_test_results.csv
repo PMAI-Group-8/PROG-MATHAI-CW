@@ -1,12 +1,12 @@
 key,value
-name,T1d_relu_sgd_no_dropout
+name,T1e_param_shallow_relu
 batch_size,256
 epochs,100
 learning_rate,0.05
 optimiser,"{'type': 'sgd', 'decay': 0.0}"
 layers,"[{'n_neurons': 1024, 'activation': 'relu', 'dropout': None, 'l2': None}, {'n_neurons': 256, 'activation': 'relu', 'dropout': None, 'l2': None}, {'n_neurons': 10, 'activation': None, 'dropout': None, 'l2': None}]"
-logging,"{'metrics': True, 'activations': True, 'activation_type': 'relu', 'log_frequency': 10}"
+logging,"{'metrics': True, 'activations': False}"
 final_test_accuracy,0.3835
-total_time_seconds,434.0055136680603
-seconds_per_epoch,4.340055136680603
-epochs_per_second,0.23041181932191496
+total_time_seconds,423.8120074272156
+seconds_per_epoch,4.238120074272156
+epochs_per_second,0.2359536734389805

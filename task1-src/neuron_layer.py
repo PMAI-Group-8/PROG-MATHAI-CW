@@ -4,10 +4,10 @@ np.random.seed(42)
 
 class NeuronLayer:
     def __init__(self, n_inputs, n_outputs, 
-        activation = None, dropout = None, 
-        l2 = None, layer_id = None):
+        activation=None, dropout=None, 
+        l2=None, layer_id=None):
         
-        self.W = np.random.randn(n_inputs, n_outputs) * np.sqrt(2 / n_inputs)
+        self.W = np.random.randn(n_inputs, n_outputs) * np.sqrt(2.0 / n_inputs)
         self.b = np.zeros((1, n_outputs))
         self.activation = activation
         self.dropout = dropout
@@ -17,7 +17,7 @@ class NeuronLayer:
     ''' Forward pass through the layer '''
     def forward(self, X, training=True):
         self.X = X
-        self.Z = np.dot(X, self.W) + self.b
+        self.Z = X @ self.W + self.b 
 
         A = self.Z
         if self.activation:
@@ -31,19 +31,21 @@ class NeuronLayer:
     
     ''' Backward pass through the layer '''
     def backward(self, dA):
+        # 1. Dropout backward
         if self.dropout:
             dA = self.dropout.backward(dA)
-        dZ = dA
-        if self.activation:
-            dZ = self.activation.backward(dA)
+
+        # 2. Activation backward
+        dZ = self.activation.backward(dA) if self.activation else dA
 
         m = self.X.shape[0]
+        inv_m = 1.0 / m
 
-        dW = np.dot(self.X.T, dZ) / m
-        db = np.sum(dZ, axis=0, keepdims=True) / m
-        dX = np.dot(dZ, self.W.T)
-
+        dW = (self.X.T @ dZ) * inv_m 
+        db = np.sum(dZ, axis=0, keepdims=True) * inv_m
+        dX = dZ @ self.W.T
 
         if self.l2 is not None:
             dW += self.l2.gradient(self.W)
+
         return dX, dW, db

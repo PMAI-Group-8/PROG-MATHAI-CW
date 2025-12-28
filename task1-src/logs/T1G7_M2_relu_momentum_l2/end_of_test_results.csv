@@ -1,0 +1,12 @@
+key,value
+name,T1G7_M2_relu_momentum_l2
+batch_size,256
+epochs,100
+learning_rate,0.05
+optimiser,"{'type': 'momentum', 'momentum': 0.9, 'decay': 0.0001}"
+layers,"[{'n_neurons': 1024, 'activation': 'relu', 'dropout': None, 'l2': 0.0005}, {'n_neurons': 256, 'activation': 'relu', 'dropout': None, 'l2': 0.0005}, {'n_neurons': 10, 'activation': None, 'dropout': None, 'l2': None}]"
+logging,"{'metrics': True, 'activations': False}"
+final_test_accuracy,0.3555
+total_time_seconds,750.2030618190765
+seconds_per_epoch,7.502030618190766
+epochs_per_second,0.13329724322575026

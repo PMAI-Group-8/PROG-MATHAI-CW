@@ -1,0 +1,12 @@
+key,value
+name,T1G7_FINAL_relu_momentum_dropout_decay
+batch_size,256
+epochs,60
+learning_rate,0.08
+optimiser,"{'type': 'momentum', 'momentum': 0.9, 'decay': 5e-05}"
+layers,"[{'n_neurons': 1024, 'activation': 'relu', 'dropout': 0.85, 'l2': 0.0005}, {'n_neurons': 256, 'activation': 'relu', 'dropout': 0.95, 'l2': None}, {'n_neurons': 10, 'activation': None, 'dropout': None, 'l2': None}]"
+logging,"{'metrics': True, 'activations': False}"
+final_test_accuracy,0.4296
+total_time_seconds,449.61207938194275
+seconds_per_epoch,7.493534656365712
+epochs_per_second,0.1334483719442741

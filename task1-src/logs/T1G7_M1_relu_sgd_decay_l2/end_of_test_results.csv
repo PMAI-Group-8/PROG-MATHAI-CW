@@ -1,0 +1,12 @@
+key,value
+name,T1G7_M1_relu_sgd_decay_l2
+batch_size,256
+epochs,100
+learning_rate,0.05
+optimiser,"{'type': 'sgd', 'decay': 0.0001}"
+layers,"[{'n_neurons': 1024, 'activation': 'relu', 'dropout': None, 'l2': 0.0005}, {'n_neurons': 256, 'activation': 'relu', 'dropout': None, 'l2': 0.0005}, {'n_neurons': 10, 'activation': None, 'dropout': None, 'l2': None}]"
+logging,"{'metrics': True, 'activations': False}"
+final_test_accuracy,0.3327
+total_time_seconds,607.0574867725372
+seconds_per_epoch,6.070574867725372
+epochs_per_second,0.1647290449075208

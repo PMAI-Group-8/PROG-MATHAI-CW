@@ -1,0 +1,12 @@
+key,value
+name,T1G7_M3_relu_adam_dropout_l2
+batch_size,256
+epochs,30
+learning_rate,0.001
+optimiser,"{'type': 'adam', 'beta1': 0.9, 'beta2': 0.999, 'decay': 0.0}"
+layers,"[{'n_neurons': 1024, 'activation': 'relu', 'dropout': 0.7, 'l2': 0.0005}, {'n_neurons': 256, 'activation': 'relu', 'dropout': 0.9, 'l2': None}, {'n_neurons': 10, 'activation': None, 'dropout': None, 'l2': None}]"
+logging,"{'metrics': True, 'activations': False}"
+final_test_accuracy,0.2691
+total_time_seconds,398.1267337799072
+seconds_per_epoch,13.270891125996908
+epochs_per_second,0.07535289005883394

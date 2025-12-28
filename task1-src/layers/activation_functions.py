@@ -22,7 +22,7 @@ class ReLU(activation):
         return np.maximum(0, Z)
     
     def backward(self, dA):
-        return dA * (self.Z > 0).astype(float)
+        return dA * (self.Z > 0)
     
 class Sigmoid(activation):
     '''Sigmoid Activation Function'''
