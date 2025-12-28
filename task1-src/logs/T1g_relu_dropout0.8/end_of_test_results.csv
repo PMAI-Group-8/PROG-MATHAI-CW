@@ -1,0 +1,16 @@
+key,value
+name,T1g_relu_dropout0.8
+activation,relu
+activation_logging,False
+batch_size,256
+epochs,150
+optimiser,sgd
+learning_rate,0.05
+decay,0.001
+momentum,
+dropout,0.8
+l2,
+final_test_accuracy,0.2504
+total_time_seconds,748.9413883686066
+seconds_per_epoch,4.992942589124044
+epochs_per_second,0.20028269545463348
